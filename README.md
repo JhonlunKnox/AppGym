@@ -1,2 +1,2 @@
 # AppGym
-Proyecto Final Desarrollo Móvil/ Proyecto Capaz de ser monetizado/ Freelance/ Emprendimiento
+Proyecto Final Desarrollo Móvil/ Proyecto Capaz de ser monetizado/ Freelance/ Emprendimientoooo
