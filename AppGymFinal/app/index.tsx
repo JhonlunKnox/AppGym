@@ -9,7 +9,7 @@ export default function MainScreen() {
   return (
     <ThemedView style={styles.container}>
 
-      <ThemedText type="title" style={styles.title}>GYM APP</ThemedText>
+      <ThemedText type="title" style={styles.title}>GYMAPP</ThemedText>
 
       <ThemedText type="subtitle" style={styles.subtitle}>Bienvenido</ThemedText>
 
@@ -25,9 +25,9 @@ export default function MainScreen() {
       <ThemedText type="default" style={styles.default}>Continuar Con</ThemedText>
 
       <View style={styles.iconContainer}>
-        <FontAwesome name="google" size={30} color="#DB4437" style={styles.icon} />
-        <FontAwesome name="apple" size={30} color="#000" style={styles.icon} />
-        <Ionicons name="finger-print" size={27} color="#ff0000" style={styles.icon} />
+        <FontAwesome name="google" size={20} color="#DB4437" style={styles.icon} />
+        <FontAwesome name="apple" size={20} color="#000" style={styles.icon} />
+        <Ionicons name="finger-print" size={17} color="#ff0000" style={styles.icon} />
       </View>
 
     </ThemedView>
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   },
   button1:{
     backgroundColor: '#ff0000ff',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 30,
     justifyContent: 'center',
     borderRadius: 100,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   button2:{
     backgroundColor: '#000000ff',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 30,
     justifyContent: 'center',
     borderRadius: 100,
@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
     paddingVertical: 15,  
   },
   title: {
-    top: -135,
+    top: -80,
     fontSize: 40,
     fontWeight: 'bold',
   },
   subtitle: {
-    top: 10,
+    top: 40,
     fontSize: 40,
     fontWeight: 'bold',
   },
