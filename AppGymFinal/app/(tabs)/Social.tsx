@@ -1,20 +1,21 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
+import { StyleSheet } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
 
+
+const imgsocial='https://www.utb.edu.co/wp-content/uploads/2022/09/happy-friends-silhouettes-jumping-sunset.jpg';
 export default function HomeScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={imgsocial}
+          contentFit="cover"
+          transition={1000}
+          style={styles.image}
         />
       }>
       <ThemedView style={styles.titleContainer}>
@@ -50,4 +51,9 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
+  image: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: 'rgba(187, 111, 13, 0.51)',
+  }
 });

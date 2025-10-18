@@ -1,25 +1,22 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
+import {StyleSheet } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 import { Link } from 'expo-router';
 
+const imgprofile='https://lamenteesmaravillosa.com/wp-content/uploads/2021/01/poseidon-dios-griego.jpg?auto=webp&quality=7500&width=1920&crop=16:9,smart,safe&format=webp&optimize=medium&dpr=2&fit=cover&fm=webp&q=75&w=1920&h=1080';
 export default function TabTwoScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+        <Image
+        style={styles.image}
+        source={imgprofile}
+        contentFit="cover"
+        transition={1000}
         />
       }>
       <ThemedView style={styles.titleContainer}>
@@ -40,11 +37,10 @@ export default function TabTwoScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  image: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: 'rgba(179, 187, 156, 0.86)',
   },
   titleContainer: {
     flexDirection: 'row',

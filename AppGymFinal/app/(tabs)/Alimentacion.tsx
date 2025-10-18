@@ -1,11 +1,10 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
+import { StyleSheet } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+
+const imgcomida='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSchS3SyjeD1JfZQCKYub-cWpN3PSgOOCfSA&s';
 
 export default function HomeScreen() {
   return (
@@ -13,9 +12,11 @@ export default function HomeScreen() {
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
+        style={styles.image}
+        source={imgcomida}
+        contentFit="cover"
+        transition={1000}
+      />
       }>
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Training today?</ThemedText>
@@ -50,4 +51,10 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
+    image: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: 'rgba(42, 179, 24, 0.65)',
+  }
+  
 });
