@@ -15,7 +15,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{headerShown: false}}>
-        <Stack.Screen name="(auth)/Login" />     
+        <Stack.Screen name="index" />     
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
