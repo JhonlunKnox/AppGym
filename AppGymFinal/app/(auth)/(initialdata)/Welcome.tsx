@@ -6,7 +6,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Fonts } from '@/constants/theme';
 import { Link } from 'expo-router';
 
-const imgprofile='https://lamenteesmaravillosa.com/wp-content/uploads/2021/01/poseidon-dios-griego.jpg?auto=webp&quality=7500&width=1920&crop=16:9,smart,safe&format=webp&optimize=medium&dpr=2&fit=cover&fm=webp&q=75&w=1920&h=1080';
+const imggymh='https://media.gq.com.mx/photos/62863225500ac81936c484e4/16:9/w_2560%2Cc_limit/pesas.jpg';
+
 export default function TabTwoScreen() {
   return (
     <ParallaxScrollView
@@ -14,7 +15,7 @@ export default function TabTwoScreen() {
       headerImage={
         <Image
         style={styles.image}
-        source={imgprofile}
+        source={imggymh}
         contentFit="cover"
         transition={1000}
         />
@@ -25,13 +26,13 @@ export default function TabTwoScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          PROFILE
+          WELCOME TO THE GYM APP
         </ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-          <Link href="../../" dismissTo style={[styles.link, styles.button2]}>
-          <ThemedText type="default" style={styles.buttonText}>Log out</ThemedText>
-          </Link>
+      <ThemedText>This app will help you in your fitness road.</ThemedText>
+      <Link href="../Personaldata" dismissTo style={[styles.link, styles.button]}>
+              <ThemedText type="default" style={styles.buttonText}>Continuar</ThemedText>
+            </Link>
     </ParallaxScrollView>
   );
 }
@@ -46,11 +47,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-    button2:{
-    backgroundColor: '#ff0000ff',
+  button: {
+    backgroundColor: '#000000ff', 
     paddingVertical: 12,
-    paddingHorizontal: 30,
     borderRadius: 8,
+    alignItems: 'center', 
+    borderColor: '#ffffff',
+    borderWidth: 1,
   },
   buttonText:{
     color: '#ffffffff', 

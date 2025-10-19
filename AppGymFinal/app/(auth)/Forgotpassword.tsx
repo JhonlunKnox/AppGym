@@ -1,21 +1,30 @@
 import { Link } from 'expo-router';
-import { StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
+
+//ESTO ES PARA MOSTRAR MENSAJES TEMPORALES 
+const msgConfirmacion = () => {
+    Toast.show({
+        type: 'error',
+        text1: 'Correo de recuperacion enviado', 
+        text2: 'Revise su correo para reestablecer la contraseña', 
+        visibilityTime: 2500, 
+    });
+};
 
 export default function LogingScreen() {
   return (
     <ThemedView style={styles.container}>
 
-      <Link href="../../" dismissTo style={[styles.link, styles.backButton]}> 
+      <Link href="../Login" dismissTo style={[styles.link, styles.backButton]}> 
         <Ionicons name="chevron-back" size={15} color="#ffffffff" />
       </Link>
 
-
-
-      <ThemedText type="title" style={styles.title}>This is the login screen</ThemedText>
+      <ThemedText type="title" style={styles.title}>Have you forgot your password?</ThemedText>
 
       <ThemedView style={styles.inputContainer}>
       <TextInput
@@ -23,31 +32,11 @@ export default function LogingScreen() {
         placeholder="Correo electrónico"
         placeholderTextColor="#A0A0A0"
         keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        placeholderTextColor="#A0A0A0"
-        secureTextEntry
-      />
-      <Link href="../Forgotpassword" dismissTo > 
-        <ThemedText type="title" style={styles.forgotPasswordText}>Olvidaste tu contraseña?</ThemedText>
-      </Link>
+      />      
     </ThemedView>
-
-   
-    
-
-
-
-      <ThemedView style={styles.linkContainer}> 
-      <Link href="../(tabs)/Profile" dismissTo style={[styles.link, styles.button1]}> 
-        <ThemedText type="default" style={styles.buttonText}>Login</ThemedText>
-      </Link>
-      <Link href="/Register" dismissTo style={[styles.link, styles.button2]}>
-        <ThemedText type="default" style={styles.buttonText}>Register</ThemedText>
-      </Link>
-      </ThemedView>
+      <TouchableOpacity style={styles.button1} onPress={msgConfirmacion}> 
+      <ThemedText type="default" style={styles.buttonText}>Enviar solicitud</ThemedText>
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -66,12 +55,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     borderRadius: 8,
   },
-  button2:{
-    backgroundColor: '#000000ff',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
+
   buttonText:{
     color: '#ffffffff', 
     textAlign: 'center',
@@ -85,8 +69,6 @@ const styles = StyleSheet.create({
   link: {
     margin:10,
   },
-
-
   title: {
     marginBottom: 100,
   },
@@ -116,15 +98,5 @@ const styles = StyleSheet.create({
     top: 25,
     left: 10,
   },
-  forgotPasswordText: {
-    color: '#ffffffff', 
-    fontSize: 14,
-    textDecorationLine: 'underline',
-    paddingVertical: 5, 
-  },
-  forgotPasswordContainer: {
-    width: '105%', 
-    alignItems: 'flex-start', 
-    paddingHorizontal: 10,
-  },
+
 });
