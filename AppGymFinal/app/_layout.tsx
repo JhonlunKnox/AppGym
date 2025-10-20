@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import Toast, { BaseToast, ErrorToast, ToastConfig, ToastConfigParams } from 'react-native-toast-message';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import AuthProvider from '@/providers/authprovider';
+
 
 //ESTO ES PARA CAMBIAR EL COLOR A LOS MENSAJITOS DE ARRIBA PA Q COMBINEN CON LA APP
 const toastConfig = {
@@ -66,12 +68,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{headerShown: false}}>
-        <Stack.Screen name="index" />     
-      </Stack>
-      <StatusBar style="auto" />
-      <Toast config={toastConfig}/>
-    </ThemeProvider>
+    <AuthProvider>
+     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+       <Stack screenOptions={{headerShown: false}}>
+         <Stack.Screen name="index" />     
+       </Stack>
+       <StatusBar style="auto" />
+       <Toast config={toastConfig}/>
+     </ThemeProvider>
+    </AuthProvider>
+    
   );
 }

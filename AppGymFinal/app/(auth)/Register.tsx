@@ -1,10 +1,58 @@
-import { Link } from 'expo-router';
-import { StyleSheet, TextInput } from 'react-native';
+import { Link, router } from 'expo-router';
+import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useState, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
+import {supabase} from "@/utils/supabase";
 
 export default function RegisterScreen() {
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false); 
+
+  const handleRegister = useCallback(async () => {
+    if (!email || !password) {
+      Toast.show({ type: 'error', text1: 'Campos vacíos', text2: 'Por favor, completa todos los campos.' });
+      return;
+    }
+    setIsAuthenticating(true);
+    
+    try {
+      const { error: signupError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+
+      if (signupError) {
+        throw signupError;
+      }
+
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (loginError) {
+        throw loginError;
+      }
+      Toast.show({ type: 'success', text1: '¡Registro Exitoso!', text2: 'Bienvenido a la app.' });
+      router.replace('/(auth)/(initialdata)/Welcome'); 
+
+    } catch (error: any) {
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Error de Registro', 
+        text2: error.message || 'Ocurrió un error desconocido.' 
+      });
+      console.error('Error durante el registro:', error);
+    }
+    
+    setIsAuthenticating(false);
+  }, [email, password]); 
+
   return (
     <ThemedView style={styles.container}>
 
@@ -20,17 +68,32 @@ export default function RegisterScreen() {
           placeholder="Correo electrónico"
           placeholderTextColor="#A0A0A0"
           keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
         <TextInput
           style={styles.input}
           placeholder="Contraseña"
           placeholderTextColor="#A0A0A0"
           secureTextEntry
+          value={password}
+          onChangeText={setPassword}
         />
         </ThemedView>
-      <Link href="../(initialdata)/Welcome" dismissTo style={[styles.link1, styles.button]}>
-        <ThemedText type="default" style={styles.buttonText}>Registrarse</ThemedText>
-      </Link>
+      <TouchableOpacity 
+        onPress={handleRegister} 
+        disabled={isAuthenticating}
+        activeOpacity={0.8}
+        style={[
+          styles.button, 
+          isAuthenticating && { opacity: 0.6 }
+        ]}>
+        {isAuthenticating ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <ThemedText type="default" style={styles.buttonText}>Registrarse</ThemedText>
+        )}
+      </TouchableOpacity>
       </ThemedView>
     </ThemedView>
   );
@@ -64,12 +127,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
   },
-  
-  // link1 rellena todo mas link 2 lo q hace es q se ajusta pa q lo tengas en cuenta bro
-  link1: {
-    width: '100%',
-    marginTop: 20,
-  },
+
   link2: {
     margin:15,
     paddingVertical: 15,
@@ -79,6 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ca1818ff', 
     paddingVertical: 15,
     borderRadius: 8,
+    width:270,
     alignItems: 'center', 
   },
  
@@ -101,3 +160,4 @@ const styles = StyleSheet.create({
     left: 10,
   },
 });
+
