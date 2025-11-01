@@ -1,52 +1,110 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { getExercisesByTarget, getTargetList, Exercise } from '../../api/exercises';
 
-const imggymh='https://media.gq.com.mx/photos/62863225500ac81936c484e4/16:9/w_2560%2Cc_limit/pesas.jpg';
+export default function ExerciseSearchScreen() {
+  const [targets, setTargets] = useState<string[]>([]);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
 
-export default function HomeScreen() {
+  // Cargar lista de músculos al iniciar
+  useEffect(() => {
+    getTargetList()
+      .then(setTargets)
+      .catch(console.error);
+  }, []);
+
+  // Buscar ejercicios cuando se selecciona un músculo
+  useEffect(() => {
+    if (selectedTarget) {
+      setLoading(true);
+      getExercisesByTarget(selectedTarget)
+        .then((data) => setExercises(data.slice(0, 1))) // limitar a 10 para no sobrecargar
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [selectedTarget]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-       <Image
-               style={styles.image}
-               source={imggymh}
-               contentFit="cover"
-               transition={1000}
-             />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Training today?</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-      <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-      <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Selecciona un grupo muscular 💪</Text>
+
+      <FlatList
+        data={targets}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              selectedTarget === item && styles.chipSelected,
+            ]}
+            onPress={() => setSelectedTarget(item)}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                selectedTarget === item && styles.chipTextSelected,
+              ]}
+            >
+              {item}
+            </Text>
+          </TouchableOpacity>
+        )}
+        style={{ marginVertical: 12 }}
+      />
+
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Image source={{ uri: item.gifUrl }} style={styles.gif} />
+              <Text style={styles.exerciseName}>{item.name}</Text>
+              <Text style={styles.subText}>
+                {item.bodyPart} | {item.equipment}
+              </Text>
+            </View>
+          )}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  chip: {
+    backgroundColor: '#eee',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginHorizontal: 6,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  chipSelected: {
+    backgroundColor: '#007AFF',
   },
-  image: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: 'rgba(167, 165, 168, 0.69)',
-  }
+  chipText: { color: '#333', fontWeight: '500' },
+  chipTextSelected: { color: '#fff' },
+  card: {
+    marginBottom: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    overflow: 'hidden',
+    paddingBottom: 8,
+  },
+  gif: { width: '100%', height: 200 },
+  exerciseName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginHorizontal: 8,
+    marginTop: 8,
+  },
+  subText: { color: '#666', marginHorizontal: 8 },
 });
