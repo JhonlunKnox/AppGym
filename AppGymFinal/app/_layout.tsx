@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 import Toast, { BaseToast, ErrorToast, ToastConfig, ToastConfigParams } from 'react-native-toast-message';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import AuthProvider from '@/providers/authprovider';
+import CommunicationProvider from '@/contexts/comunicationcontext';
 
 
 //ESTO ES PARA CAMBIAR EL COLOR A LOS MENSAJITOS DE ARRIBA PA Q COMBINEN CON LA APP
@@ -69,13 +70,15 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-       <Stack screenOptions={{headerShown: false}}>
-         <Stack.Screen name="index" />     
-       </Stack>
-       <StatusBar style="auto" />
-       <Toast config={toastConfig}/>
-     </ThemeProvider>
+      <CommunicationProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack screenOptions={{headerShown: false}}>
+            <Stack.Screen name="index" />     
+          </Stack>
+          <StatusBar style="auto" />
+          <Toast config={toastConfig}/>
+        </ThemeProvider>
+      </CommunicationProvider>
     </AuthProvider>
     
   );
