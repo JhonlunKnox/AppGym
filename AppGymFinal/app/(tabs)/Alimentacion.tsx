@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 
 const imgcomida='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSchS3SyjeD1JfZQCKYub-cWpN3PSgOOCfSA&s';
 
-export default function HomeScreen() {
+export default function AlimentacionScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
@@ -8,10 +8,60 @@ import { Fonts } from '@/constants/theme';
 import { useCommunication } from '@/contexts/comunicationcontext';
 import { useAuth } from '@/providers/authprovider';
 import Toast from 'react-native-toast-message';
+import useImagePickerAndUpload from '@/hooks/useImagePickerAndUpload';
 
-const imgprofile='https://lamenteesmaravillosa.com/wp-content/uploads/2021/01/poseidon-dios-griego.jpg?auto=webp&quality=7500&width=1920&crop=16:9,smart,safe&format=webp&optimize=medium&dpr=2&fit=cover&fm=webp&q=75&w=1920&h=1080';
-export default function TabTwoScreen() {
+
+export default function ProfileScreen() {
+
+  const { pickImageAndUpload,isUploading, uploadError } = useImagePickerAndUpload();
+  const { updateusuario, getfromusuario} = useCommunication();
+  const [uploadedMsg, setUploadedMsg] = useState<string | null>(null);
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const { cleanupAndLogout } = useAuth();
+  
+  const handlePick = async () => {
+    setUploadedMsg(null);
+    const res = await pickImageAndUpload({ fileName: 'profile.jpg', overwrite: true });
+    if (res && res.publicUrl) { 
+      const baseUrl = res.publicUrl;
+      const uniqueUrl = `${baseUrl}?t=${new Date().getTime()}`;
+      try {
+        await updateusuario('profile_pic_url', uniqueUrl); 
+        setProfileUrl(uniqueUrl); 
+        setUploadedMsg('Avatar saved');
+        Toast.show({
+          type: 'success',
+          text1: uploadedMsg!,
+          text2: 'Your avatar has been updated.'
+        });
+
+      } catch (err: any) {
+        setUploadedMsg('Saved to storage but failed to update profile');
+        Toast.show({
+          type: 'error',
+          text1: uploadedMsg!,
+          text2: 'Your avatar hasn´t been updated.'
+        });
+      }
+    }
+  };
+
+    const loadProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const data = await getfromusuario(['profile_pic_url']);
+        setProfileUrl(data?.profile_pic_url || null);
+      } catch (err) {
+        console.warn('Failed to load profile:', err);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      loadProfile();
+    }, []);
   
   const handleLogout = async () => {
     try {
@@ -30,7 +80,6 @@ export default function TabTwoScreen() {
       });
     }
   };
-  const { getfromusuario } = useCommunication();
   const [username, setUsername] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
@@ -51,42 +100,53 @@ export default function TabTwoScreen() {
     loadUserData();
   }, []);
 
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <Image
-        style={styles.image}
-        source={imgprofile}
-        contentFit="cover"
-        transition={1000}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          {loading ? 'Cargando...' : `¡Bienvenido ${username}!`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-          <TouchableOpacity 
+return (
+    <ThemedView style={{ flex: 1 }}> 
+        <ParallaxScrollView
+            headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+            headerImage={
+                <Image
+                    style={styles.image}
+                    source={profileUrl}
+                    contentFit="cover"
+                    transition={1000}
+                />
+            }
+        >
+            <ThemedView style={styles.titleContainer}>
+                <ThemedText
+                    type="title"
+                    style={{ fontFamily: Fonts.rounded }}>
+                    {loading ? 'Cargando...' : `¡Bienvenido ${username}!`}
+                </ThemedText>
+            </ThemedView>
+            <ThemedText>This app includes example code to help you get started.</ThemedText>
+            <TouchableOpacity onPress={handlePick} style={styles.uploadButton} disabled={isUploading}>
+              {isUploading ? (
+                <ActivityIndicator color="#ffffffff" />
+              ) : (
+                <ThemedText type="default" style={styles.buttonText}>Pick & Upload Avatar</ThemedText>
+              )}
+            </TouchableOpacity>
+
+
+        </ParallaxScrollView>
+
+        <TouchableOpacity 
             onPress={handleLogout}
             activeOpacity={0.8}
-            style={[styles.button2]}>
-            <ThemedText type="default" style={styles.buttonText}>Cerrar Sesión</ThemedText>
-          </TouchableOpacity>
-    </ParallaxScrollView>
-  );
+            style={styles.button2}>
+            <ThemedText type="default" style={styles.buttonText}>Log Out</ThemedText>
+        </TouchableOpacity>
+    </ThemedView>
+);
 }
 
 const styles = StyleSheet.create({
   image: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'rgba(179, 187, 156, 0.86)',
+    backgroundColor: 'rgba(71, 71, 71, 0.86)',
   },
   titleContainer: {
     flexDirection: 'row',
@@ -97,10 +157,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
+    position: 'absolute', 
+    bottom: 20,           
+    alignSelf: 'center',
+    
   },
   buttonText:{
     color: '#ffffffff', 
     textAlign: 'center',
+  },
+    uploadButton: {
+    backgroundColor: '#ca1818',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
   },
   
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { getExercisesByTarget, getTargetList, Exercise } from '../../api/exercises';
 
-export default function ExerciseSearchScreen() {
+export default function GymScreen() {
   const [targets, setTargets] = useState<string[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);

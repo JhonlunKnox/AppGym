@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 
 
 const imgsocial='https://www.utb.edu.co/wp-content/uploads/2022/09/happy-friends-silhouettes-jumping-sunset.jpg';
-export default function HomeScreen() {
+export default function SocialScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
