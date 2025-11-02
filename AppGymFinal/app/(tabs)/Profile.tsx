@@ -5,14 +5,31 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts } from '@/constants/theme';
-import { supabase } from '@/utils/supabase';
 import { useCommunication } from '@/contexts/comunicationcontext';
+import { useAuth } from '@/providers/authprovider';
+import Toast from 'react-native-toast-message';
 
-const logout = () =>{
-  supabase.auth.signOut();
-}
 const imgprofile='https://lamenteesmaravillosa.com/wp-content/uploads/2021/01/poseidon-dios-griego.jpg?auto=webp&quality=7500&width=1920&crop=16:9,smart,safe&format=webp&optimize=medium&dpr=2&fit=cover&fm=webp&q=75&w=1920&h=1080';
 export default function TabTwoScreen() {
+  const { cleanupAndLogout } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+      await cleanupAndLogout();
+      Toast.show({
+        type: 'success',
+        text1: 'Sesión cerrada',
+        text2: 'Has cerrado sesión correctamente'
+      });
+    } catch (error) {
+      console.error('Error durante el logout:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'No se pudo cerrar la sesión'
+      });
+    }
+  };
   const { getfromusuario } = useCommunication();
   const [username, setUsername] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -55,10 +72,11 @@ export default function TabTwoScreen() {
         </ThemedText>
       </ThemedView>
       <ThemedText>This app includes example code to help you get started.</ThemedText>
-          <TouchableOpacity onPress={logout}
-          activeOpacity={0.8}
-          style={[styles.button2]}>
-          <ThemedText type="default" style={styles.buttonText}>LogOut</ThemedText>
+          <TouchableOpacity 
+            onPress={handleLogout}
+            activeOpacity={0.8}
+            style={[styles.button2]}>
+            <ThemedText type="default" style={styles.buttonText}>Cerrar Sesión</ThemedText>
           </TouchableOpacity>
     </ParallaxScrollView>
   );
