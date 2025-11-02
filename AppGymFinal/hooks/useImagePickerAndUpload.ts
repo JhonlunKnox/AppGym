@@ -3,9 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { supabase } from '../utils/supabase'; 
 import { useCommunication } from '@/contexts/comunicationcontext';
-
-// Reemplaza esto con tu URL real de Supabase
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ;
 
 const useImagePickerAndUpload = (bucketName = 'profilepics') => {
   const [imageUri, setImageUri] = useState<string | null>(null);

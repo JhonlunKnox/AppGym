@@ -19,7 +19,44 @@ export default function ProfileScreen() {
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const { cleanupAndLogout } = useAuth();
-  
+  const [gender, setgender] = useState<string | null>(null);
+  const [saludo, setsaludo] = useState<string | null>(null);
+
+
+
+    useEffect(() => {
+    const loadUsergender = async () => {
+      try {
+        const usergender = await getfromusuario(['gender']);
+        if (usergender && usergender.gender) {
+          setgender(usergender.gender);
+        }
+        if(usergender.gender=='female'){
+          setsaludo('Bienvenida');
+        }else{
+          setsaludo('Bienvenido');
+        }
+      } catch (error) {
+        console.error('Error loading user gender:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsergender();
+  }, []);
+
+  const handleSetDefault = async () => {
+    try {
+
+        await updateusuario('profile_pic_url', 'https://thumbs.dreamstime.com/b/figura-fuerte-levantando-ejercicio-pesado-de-elevaci%C3%B3n-pesas-en-barbell-ilustraci%C3%B3n-d-una-hombre-haciendo-un-ascensor-barbacoa-388582634.jpg'); 
+        Toast.show({ type: 'success', text1: 'Imagen borrada' });
+        loadProfilepic();
+    } catch (error) {
+
+    }
+ };
+
   const handlePick = async () => {
     setUploadedMsg(null);
     const res = await pickImageAndUpload({ fileName: 'profile.jpg', overwrite: true });
@@ -47,7 +84,7 @@ export default function ProfileScreen() {
     }
   };
 
-    const loadProfile = async () => {
+    const loadProfilepic = async () => {
       setProfileLoading(true);
       try {
         const data = await getfromusuario(['profile_pic_url']);
@@ -60,7 +97,7 @@ export default function ProfileScreen() {
     };
   
     useEffect(() => {
-      loadProfile();
+      loadProfilepic();
     }, []);
   
   const handleLogout = async () => {
@@ -100,6 +137,7 @@ export default function ProfileScreen() {
     loadUserData();
   }, []);
 
+
 return (
     <ThemedView style={{ flex: 1 }}> 
         <ParallaxScrollView
@@ -117,7 +155,7 @@ return (
                 <ThemedText
                     type="title"
                     style={{ fontFamily: Fonts.rounded }}>
-                    {loading ? 'Cargando...' : `¡Bienvenido ${username}!`}
+                    {loading ? 'Cargando...' : `¡${saludo} ${username}!`}
                 </ThemedText>
             </ThemedView>
             <ThemedText>This app includes example code to help you get started.</ThemedText>
@@ -126,6 +164,13 @@ return (
                 <ActivityIndicator color="#ffffffff" />
               ) : (
                 <ThemedText type="default" style={styles.buttonText}>Pick & Upload Avatar</ThemedText>
+              )}
+            </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSetDefault} style={styles.uploadButton} disabled={isUploading}>
+              {isUploading ? (
+                <ActivityIndicator color="#ffffffff" />
+              ) : (
+                <ThemedText type="default" style={styles.buttonText}>Delete profile pic</ThemedText>
               )}
             </TouchableOpacity>
 

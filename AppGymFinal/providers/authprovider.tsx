@@ -70,6 +70,9 @@ export default function AuthProvider(props:Props){
                         if (profile && profile.goal != null) {
                             router.replace('/(tabs)/Profile');
                         } 
+                        else{
+                            router.replace('/(auth)/(initialdata)/Welcome');
+                        }
                     }
                 } catch (err) {
                     console.warn('Error comprobando goal en onAuthStateChange:', err);
