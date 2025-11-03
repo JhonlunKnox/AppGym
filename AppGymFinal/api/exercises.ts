@@ -7,6 +7,7 @@ export interface Exercise {
   gifUrl: string;
 }
 
+// LLAVES DE LA API, CONECTADAS AL .ENV
 const EXERCISE_API_KEY = process.env.EXPO_PUBLIC_EXERCISE_API_KEY!;
 const EXERCISE_API_URL = 'https://exercisedb.p.rapidapi.com/exercises';
 const EXERCISE_API_HOST = 'exercisedb.p.rapidapi.com';
