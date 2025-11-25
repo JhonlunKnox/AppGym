@@ -17,6 +17,7 @@ import {
   Animated,
   Easing,
   Linking,
+  ScrollView,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { supabase } from "../../utils/supabase";
@@ -73,11 +74,19 @@ export default function GymScreen() {
   const [targets, setTargets] = useState<string[]>([]);
   const [filterTarget, setFilterTarget] = useState<string | null>(null);
 
-  // Rutinas
+  // Rutinas / modales
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
-  const [rutinaModalVisible, setRutinaModalVisible] = useState<boolean>(false);
+  const [rutinaModalVisible, setRutinaModalVisible] = useState<boolean>(false); // ya lo usabas: para elegir rutina al añadir ejercicio
   const [creatingRutina, setCreatingRutina] = useState<boolean>(false);
   const [newRutinaName, setNewRutinaName] = useState<string>("");
+
+  // New: top buttons open these modales
+  const [routinesListVisible, setRoutinesListVisible] = useState<boolean>(false); // "Ver Rutinas"
+  const [createRoutineVisible, setCreateRoutineVisible] = useState<boolean>(false); // "Crear Rutina (form)"
+  // detail view of a selected routine
+  const [viewRutinaModalVisible, setViewRutinaModalVisible] = useState<boolean>(false);
+  const [viewRutinaExercises, setViewRutinaExercises] = useState<any[]>([]);
+  const [viewRutinaTitle, setViewRutinaTitle] = useState<string>("");
 
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -255,6 +264,8 @@ export default function GymScreen() {
       setCreatingRutina(false);
       await loadRutinas();
       Alert.alert("Hecho", "Rutina creada.");
+      // if createRoutineVisible is open, keep it open? we'll close it:
+      setCreateRoutineVisible(false);
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "No se pudo crear la rutina.");
@@ -272,6 +283,27 @@ export default function GymScreen() {
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "No se pudo añadir a la rutina.");
+    }
+  }
+
+  // Cargar ejercicios de una rutina para mostrar detalle
+  async function loadRoutineExercises(rutinaId: string, title?: string) {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("rutina_ejercicios")
+        .select("*, exercises(*)")
+        .eq("rutina_id", rutinaId)
+        .order("order_index", { ascending: true });
+      if (error) throw error;
+      setViewRutinaExercises((data as any[]) ?? []);
+      setViewRutinaTitle(title ?? "");
+      setViewRutinaModalVisible(true);
+    } catch (err) {
+      console.error("loadRoutineExercises err", err);
+      Alert.alert("Error", "No se pudo cargar los ejercicios de la rutina.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -452,7 +484,7 @@ export default function GymScreen() {
     );
   }
 
-  // Rutina Modal
+  // Rutina Modal (usada para elegir rutina al añadir ejercicio)
   function RutinaModal() {
     return (
       <Modal visible={rutinaModalVisible} animationType="slide" transparent>
@@ -510,17 +542,153 @@ export default function GymScreen() {
     );
   }
 
+  // New: Modal to show list of user's routines (triggered by top "Rutinas" card)
+  function RoutinesListModal() {
+    return (
+      <Modal visible={routinesListVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Tus rutinas</Text>
+
+            {loading ? (
+              <ActivityIndicator size="large" color="#FF3B3B" />
+            ) : rutinas.length === 0 ? (
+              <Text style={styles.noData}>No tienes rutinas aún.</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 380 }}>
+                {rutinas.map((r) => (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={styles.routineCard}
+                    onPress={() => {
+                      // load detalle local y mostrar
+                      loadRoutineExercises(r.id, r.title);
+                      setRoutinesListVisible(false);
+                    }}
+                  >
+                    <Text style={styles.routineName}>{r.title}</Text>
+                    {r.description ? <Text style={styles.routineDesc}>{r.description}</Text> : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={() => {
+                  setRoutinesListVisible(false);
+                  // open create modal
+                  setCreateRoutineVisible(true);
+                }}
+              >
+                <Text style={styles.btnPrimaryText}>Crear nueva rutina</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.btnSecondary, { marginTop: 8 }]} onPress={() => setRoutinesListVisible(false)}>
+                <Text style={{ color: "#ccc" }}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // New: Modal to create a routine (triggered by top "Crear Rutina" card)
+  function CreateRoutineModal() {
+    return (
+      <Modal visible={createRoutineVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Crear nueva rutina</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nombre de la rutina"
+              placeholderTextColor="#888"
+              value={newRutinaName}
+              onChangeText={setNewRutinaName}
+            />
+
+            <TouchableOpacity
+              style={styles.btnPrimary}
+              onPress={async () => {
+                await createRutina();
+                // reload list
+                await loadRutinas();
+              }}
+            >
+              <Text style={styles.btnPrimaryText}>Guardar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.btnSecondary, { marginTop: 8 }]} onPress={() => setCreateRoutineVisible(false)}>
+              <Text style={{ color: "#ccc" }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // New: Modal to view a rutina's exercises
+  function ViewRutinaModal() {
+    return (
+      <Modal visible={viewRutinaModalVisible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalBox, { maxHeight: "80%" }]}>
+            <Text style={styles.modalTitle}>{viewRutinaTitle || "Rutina"}</Text>
+
+            {loading ? (
+              <ActivityIndicator size="large" color="#FF3B3B" />
+            ) : viewRutinaExercises.length === 0 ? (
+              <Text style={styles.noData}>La rutina no tiene ejercicios aún.</Text>
+            ) : (
+              <ScrollView style={{ marginTop: 8 }}>
+                {viewRutinaExercises.map((item: any) => (
+                  <View key={item.id} style={styles.routineCard}>
+                    <Text style={styles.routineName}>{item.exercises?.name ?? "—"}</Text>
+                    <Text style={styles.routineDesc}>
+                      {item.sets ?? "-"} x {item.reps ?? "-"} — {item.weight ?? 0}kg
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity style={styles.btnPrimary} onPress={() => setViewRutinaModalVisible(false)}>
+                <Text style={styles.btnPrimaryText}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* top row with optional design reference (not required by user, only available locally) */}
       <View style={styles.topRow}>
-        <TouchableOpacity style={styles.bigCard} onPress={() => router.push("/routines")}>
+        <TouchableOpacity
+          style={styles.bigCard}
+          onPress={async () => {
+            await loadRutinas();
+            setRoutinesListVisible(true);
+          }}
+        >
           <Text style={styles.bigCardIcon}>🏋️</Text>
           <Text style={styles.bigCardTitle}>Rutinas</Text>
           <Text style={styles.bigCardSub}>Ver rutinas guardadas</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.bigCard} onPress={() => router.push("/routines/new")}>
+        <TouchableOpacity
+          style={styles.bigCard}
+          onPress={() => {
+            setCreateRoutineVisible(true);
+          }}
+        >
           <Text style={styles.bigCardIcon}>➕</Text>
           <Text style={styles.bigCardTitle}>Crear Rutina</Text>
           <Text style={styles.bigCardSub}>Arma tu propia rutina</Text>
@@ -559,8 +727,14 @@ export default function GymScreen() {
         <FlatList data={filtered} keyExtractor={(i) => i.id} renderItem={renderCard} contentContainerStyle={{ paddingBottom: 120 }} />
       )}
 
+      {/* existing modals */}
       <DetailModal />
       <RutinaModal />
+
+      {/* new top modals */}
+      <RoutinesListModal />
+      <CreateRoutineModal />
+      <ViewRutinaModal />
     </View>
   );
 }
@@ -668,7 +842,7 @@ const styles = StyleSheet.create({
   },
   sub: { color: "#aaa" },
 
-  // 🟥 Modal
+  // 🟥 Modal (detail)
   modalSafe: { flex: 1, backgroundColor: "#050505" },
   modalHeader: {
     padding: 16,
@@ -761,7 +935,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: { color: "#fff", fontWeight: "900", fontSize: 17 },
 
-  // 📦 Modal Rutinas
+  // 📦 Modal Rutinas (elegir)
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -812,4 +986,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
   },
+
+  // --- New styles for top modals ---
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    width: "88%",
+    padding: 18,
+    backgroundColor: "#121212",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,0,0,0.25)",
+  },
+  noData: { color: "#aaa", marginBottom: 8 },
+  routineCard: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#0E0E0E",
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,0,0,0.12)",
+  },
+  routineName: { color: "#fff", fontWeight: "800" },
+  routineDesc: { color: "#888", marginTop: 4 },
 });
