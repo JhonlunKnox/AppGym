@@ -259,7 +259,7 @@ export default function AlimentacionScreen() {
         }
       >
         <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Training today?</ThemedText>
+          <ThemedText type="title">Con Tu Modo Premium, Te Armamos Tu Plan de Alimentación</ThemedText>
         </ThemedView>
 
         {/* LISTA DE CHATS */}
