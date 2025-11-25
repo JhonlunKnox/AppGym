@@ -232,6 +232,22 @@ export default function ProfileScreenTemplate() {
           >
             <ThemedText style={styles.menuButtonText}>Validar Rango</ThemedText>
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={async () => {
+              if (puntos !== null) {
+                try {
+                  await updateusuario('puntos', puntos + 30);
+                  setPuntos(puntos + 30);
+                } catch (error) {
+                  console.warn('Error al sumar puntos:', error);
+                }
+              }
+            }}
+            style={[styles.menuButton, { marginTop: 12 }]}
+            accessibilityLabel="Sumar 30 puntos"
+          >
+            <ThemedText style={styles.menuButtonText}>Sumar 30 puntos</ThemedText>
+          </TouchableOpacity>
           {error && <ThemedText style={[styles.blockText, { color: 'red' }]}>{error}</ThemedText>}
 
         </ThemedView>

@@ -1,28 +1,30 @@
 import { supabase } from '../utils/supabase';
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback } from "react"; // Añadido useState y useCallback
 import { useAuth } from '../providers/authprovider';
 
-type FriendIDCallback = ((id: string) => void) | null;
-
 interface CommunicationContextType {
+    // === Funciones de Supabase (Existentes) ===
     // acepta (fieldName: string, newValue: any) o (objectConCampos)
     updateusuario: (fieldNameOrObject: string | Record<string, any>, newValue?: any) => Promise<any> | null; 
     getfromusuario: (selectFields?: string | string[]) => Promise<any> | null;
     agregarAmigo: (friendID: string) => Promise<void>;
     eliminarAmigo: (friendID: string) => Promise<void>;
     obtenerListaAmigos: () => Promise<AmigoDetalle[]>;
+    getFromotherUsuario: (targetId: string, selectFields?: string | string[]) => Promise<any> | null;
     userId: string | null;
     loading: boolean;
 
-    setFriendIDCallback: React.Dispatch<React.SetStateAction<FriendIDCallback>>;
-    executeFriendIDCallback: (id: string) => void;
+    // === Funcionalidad de Callback (NUEVA) ===
+    componentCallback: (() => void) | null;
+    setComponentCallback: (callback: (() => void) | null) => void;
+    executeCallback: () => void;
 }
 
 interface AmigoDetalle {
-    user_id: string;
-    username?: string;
-    nombres?: string;
+    id: string;        // ✅ Cambio principal
+    nombre: string;    // ✅ Cambio principal
     rango?: string;
+    puntos?: number;
 }
 
 const CommunicationContext = createContext<CommunicationContextType>({} as CommunicationContextType);
@@ -36,15 +38,21 @@ const TABLE_NAME = 'usuario';
 export default function CommunicationProvider(props: Props) {
 
     const { userId, loading } = useAuth(); 
+    
+    // === ESTADO Y LÓGICA DEL CALLBACK (NUEVO) ===
+    const [componentCallback, setComponentCallback] = useState<(() => void) | null>(null);
 
-    const [friendIDCallback, setFriendIDCallback] = useState<FriendIDCallback>(null);
-
-    const executeFriendIDCallback = useCallback((id: string) => {
-        if (friendIDCallback) {
-            friendIDCallback(id);
-            setFriendIDCallback(null);
+    // Función para ejecutar el callback almacenado
+    const executeCallback = useCallback(() => {
+        console.log('Intentando ejecutar callback...');
+        if (componentCallback) {
+            componentCallback();
+            console.log('Callback ejecutado.');
+        } else {
+            console.log('No hay función de callback establecida.');
         }
-    }, [friendIDCallback]);
+    }, [componentCallback]); 
+    // ===========================================
 
     // Utility function to get canonical order of user IDs
     function getCanonicalIDs(otherUserID: string): [string, string] {
@@ -52,6 +60,43 @@ export default function CommunicationProvider(props: Props) {
         return userId < otherUserID ? [userId, otherUserID] : [otherUserID, userId];
     }
 
+const getFromotherUsuario = async (targetId: string, selectFields?: string | string[]): Promise<any> =>{
+
+    if (!targetId) {
+        console.warn("Se requiere un targetId para esta consulta.");
+        return null;
+    }
+    let selectString;
+    if (Array.isArray(selectFields)) {
+        selectString = selectFields.join(', ');
+    } else {
+        selectString = '*';
+    }
+
+    console.log(`[getOtherUserFromUsuario] Buscando datos para ID: ${targetId}`);
+
+    try {
+        const { data, error } = await supabase
+            .from(TABLE_NAME)
+            .select(selectString)
+            .eq('user_id', targetId)
+            .single();
+
+        if (error) {
+            // If no rows found, return null instead of throwing error
+            if (error.code === 'PGRST116') { // no rows found error code
+                console.warn(`[GET OTHER PROFILE]: No se encontró usuario con ID ${targetId}`);
+                return null;
+            }
+            throw new Error(`[GET OTHER PROFILE ERROR]: ${error.message}`);
+        }
+        return data;
+    } catch (err: any) {
+        // Additional catch for unexpected errors
+        console.error(`[GET OTHER PROFILE]: Error inesperado`, err);
+        throw err;
+    }
+}
     const getfromusuario = async (selectFields?: string | string[]): Promise<any> =>{
         
         if (!userId) {
@@ -83,11 +128,11 @@ export default function CommunicationProvider(props: Props) {
     }
 
     const { data, error } = await supabase
-        .from(TABLE_NAME)         
-        .update(updatedFields)      
-        .eq('user_id', userId)      
-        .select()                   
-        .single();                 
+        .from(TABLE_NAME)         
+        .update(updatedFields)      
+        .eq('user_id', userId)      
+        .select()                   
+        .single();                 
 
     if (error) {
         throw new Error(`[UPDATE PROFILE ERROR]: ${error.message}`);
@@ -173,61 +218,109 @@ export default function CommunicationProvider(props: Props) {
 
     // Retrieve friend list with details
     const obtenerListaAmigos = async (): Promise<AmigoDetalle[]> => {
-        if (!userId) {
-            console.warn("No hay usuario autenticado. No se puede obtener la lista de amigos.");
+    if (!userId) {
+        console.warn("No hay usuario autenticado. No se puede obtener la lista de amigos.");
+        return [];
+    }
+    
+    try {
+        console.log('[obtenerListaAmigos] Buscando amigos para userId:', userId);
+        
+        // OPCIÓN 1: Usar dos consultas separadas y combinarlas
+        // Busca donde el usuario es usuario_id_1
+        const { data: amigos1, error: error1 } = await supabase
+            .from('amigos')
+            .select('usuario_id_1, usuario_id_2')
+            .eq('usuario_id_1', userId);
+        
+        if (error1) {
+            console.error('[obtenerListaAmigos] Error en consulta 1:', error1);
+            throw new Error(`Error al buscar amigos (parte 1): ${error1.message}`);
+        }
+        
+        // Busca donde el usuario es usuario_id_2
+        const { data: amigos2, error: error2 } = await supabase
+            .from('amigos')
+            .select('usuario_id_1, usuario_id_2')
+            .eq('usuario_id_2', userId);
+        
+        if (error2) {
+            console.error('[obtenerListaAmigos] Error en consulta 2:', error2);
+            throw new Error(`Error al buscar amigos (parte 2): ${error2.message}`);
+        }
+        
+        console.log('[obtenerListaAmigos] Amigos1:', amigos1);
+        console.log('[obtenerListaAmigos] Amigos2:', amigos2);
+        
+        // Combina ambos resultados
+        const amigosData = [...(amigos1 || []), ...(amigos2 || [])];
+        
+        if (amigosData.length === 0) {
+            console.log('[obtenerListaAmigos] No se encontraron amigos');
             return [];
         }
         
-        // Get friend relations where current user is either usuario_id_1 or usuario_id_2
-        const { data: amigosData, error: amigosError } = await supabase
-            .from('amigos')
-            .select('usuario_id_1, usuario_id_2')
-            .or(\`usuario_id_1.eq.\${userId},usuario_id_2.eq.\${userId}\`);
+        // Extrae los IDs de amigos (el otro usuario en cada par)
+        const friendIDs = amigosData.map((row: any) => 
+            row.usuario_id_1 === userId ? row.usuario_id_2 : row.usuario_id_1
+        );
         
-        if (amigosError) {
-            throw new Error(\`[GET FRIENDS ERROR]: \${amigosError.message}\`);
+        console.log('[obtenerListaAmigos] IDs de amigos extraídos:', friendIDs);
+        
+        if (friendIDs.length === 0) {
+            console.log('[obtenerListaAmigos] No hay IDs de amigos para buscar');
+            return [];
         }
         
-        // Extract friend IDs (the other user in the pair)
-        const friendIDs = amigosData?.map((row: any) => 
-            row.usuario_id_1 === userId ? row.usuario_id_2 : row.usuario_id_1
-        ) ?? [];
-        
-        if (friendIDs.length === 0) return [];
-        
-        // Get friend details from usuario table
+        // Obtiene los detalles de los amigos desde la tabla usuario
         const { data: friendDetails, error: detailsError } = await supabase
             .from('usuario')
-            .select('user_id, username, nombres, rango')
+            .select('user_id, username, nombres, rango, puntos')
             .in('user_id', friendIDs);
 
         if (detailsError) {
-            throw new Error(\`[GET FRIEND DETAILS ERROR]: \${detailsError.message}\`);
+            console.error('[obtenerListaAmigos] Error al obtener detalles:', detailsError);
+            throw new Error(`Error al obtener detalles de amigos: ${detailsError.message}`);
         }
 
-        return friendDetails as AmigoDetalle[];
-    };
+        console.log('[obtenerListaAmigos] Detalles de amigos:', friendDetails);
 
-    const contextValue = useMemo(() => ({
-        updateusuario, 
-        getfromusuario, 
-        agregarAmigo, 
-        eliminarAmigo, 
-        obtenerListaAmigos, 
-        userId, 
-        loading,
-        setFriendIDCallback,
-        executeFriendIDCallback,
-    }), [updateusuario, getfromusuario, agregarAmigo, eliminarAmigo, obtenerListaAmigos, userId, loading, friendIDCallback]);
+        // Mapea los resultados al formato esperado
+        const resultado = (friendDetails || []).map(friend => ({
+            id: friend.user_id,
+            nombre: friend.nombres || friend.username || 'Usuario',
+            rango: friend.rango || 'Novato',
+            puntos: friend.puntos || 0
+        }));
+
+        console.log('[obtenerListaAmigos] Resultado final:', resultado);
+        return resultado;
+        
+    } catch (error: any) {
+        console.error('[obtenerListaAmigos] Error general:', error);
+        throw error;
+    }
+};
 
     return (
-
-        <CommunicationContext.Provider value={contextValue}>
+        <CommunicationContext.Provider 
+            value={{ 
+                updateusuario, 
+                getfromusuario, 
+                agregarAmigo, 
+                eliminarAmigo, 
+                obtenerListaAmigos, 
+                userId, 
+                loading,
+                componentCallback,
+                setComponentCallback,
+                executeCallback,
+                getFromotherUsuario
+            }}
+        >
             {props.children}
         </CommunicationContext.Provider>
     );
 }
 
 export const useCommunication = () => useContext(CommunicationContext);
-
-

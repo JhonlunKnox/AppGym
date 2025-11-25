@@ -73,7 +73,7 @@ export default function RootLayout() {
       <CommunicationProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack screenOptions={{headerShown: false}}>
-            <Stack.Screen name="index" />     
+            <Stack.Screen name="/(modal)/QRScannerScreen" options={{ presentation: 'modal' }} />
           </Stack>
           <StatusBar style="auto" />
           <Toast config={toastConfig}/>

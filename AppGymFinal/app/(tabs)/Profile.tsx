@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, ScrollView, View, Text, RefreshControl } from 'react-native';
 import { useState, useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,8 +20,14 @@ export default function ProfileScreen() {
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const { cleanupAndLogout } = useAuth();
+
+  // New state for refreshing status
+  const [refreshing, setRefreshing] = useState(false);
+
   const [gender, setgender] = useState<string | null>(null);
   const [saludo, setsaludo] = useState<string | null>(null);
+  const [rango, setRango] = useState<string | null>(null);
+  const [puntos, setPuntos] = useState<number | null>(null);
   const [isEditingPhoto, setIsEditingPhoto] = useState<boolean>(false);
   const [isEditingUsername, setIsEditingUsername] = useState<boolean>(false);
   const [editUsernameValue, setEditUsernameValue] = useState<string>('');
@@ -41,6 +47,89 @@ export default function ProfileScreen() {
     setSelectedDate(date);
   }
 };
+
+  // Refresh function to reload user data
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    try {
+      const usergender = await getfromusuario(['gender']);
+      if (usergender && usergender.gender) {
+        setgender(usergender.gender);
+      }
+      if(usergender.gender=='female'){
+        setsaludo('Bienvenida');
+      }else{
+        setsaludo('Bienvenido');
+      }
+    } catch (error) {
+      console.error('Error loading user gender:', error);
+    }
+
+    try {
+      const data = await getfromusuario(['fin_suscripcion']);
+      if (data && data.fin_suscripcion) {
+        setFinSuscripcion(data.fin_suscripcion);
+      }
+    } catch (error) {
+      console.error('Error loading fin_suscripcion:', error);
+    }
+
+    try {
+      const data = await getfromusuario(['username', 'rango', 'puntos']);
+      if(data) {
+        if (data.username) setUsername(data.username);
+        if (data.rango) setRango(data.rango);
+        if (data.puntos !== undefined) setPuntos(data.puntos);
+      }
+    } catch (error) {
+      console.error('Error loading user basic info:', error);
+    }
+
+    try {
+      const data = await getfromusuario([
+        'weight',
+        'height',
+        'gender',
+        'build',
+        'goal',
+        'initial_level'
+      ]);
+      const attributesArray = [
+        data?.weight || null,
+        data?.height || null,
+        data?.gender || null,
+        data?.build || null,
+        data?.goal || null,
+        data?.initial_level || null,
+      ];
+      setUserAttributes(attributesArray);
+    } catch (error) {
+      console.error('Error loading user attributes:', error);
+      setUserAttributes([]);
+    }
+
+    try {
+      const userData = await getfromusuario(['user_id']);
+      if (userData && userData.user_id) {
+        setUserDbId(userData.user_id);
+      }
+    } catch (error) {
+      console.error('Error loading user ID:', error);
+    }
+
+    try {
+      const data = await getfromusuario(['profile_pic_url']);
+      setProfileLoading(true);
+      setProfileUrl(data?.profile_pic_url || null);
+      setProfileLoading(false);
+    } catch (err) {
+      console.warn('Failed to load profile:', err);
+      setProfileLoading(false);
+    }
+
+    setRefreshing(false);
+  };
 
 const formatDate = (date: Date) => {
   const year = date.getFullYear();
@@ -64,6 +153,8 @@ const formatDateISO = (date: Date) => {
   const [isEditingHeight, setIsEditingHeight] = useState<boolean>(false);
   const [editWeightValue, setEditWeightValue] = useState<string>('');
   const [editHeightValue, setEditHeightValue] = useState<string>('');
+
+// ... existing content above
 
   useEffect(() => {
     const loadUsergender = async () => {
@@ -95,6 +186,22 @@ const formatDateISO = (date: Date) => {
       }
     };
     loadFinSuscripcion();
+
+    // New function to load username, rango and puntos
+    const loadUserBasicInfo = async () => {
+      try {
+        const data = await getfromusuario(['username', 'rango', 'puntos']);
+        if(data) {
+          if (data.username) setUsername(data.username);
+          if (data.rango) setRango(data.rango);
+          if (data.puntos !== undefined) setPuntos(data.puntos);
+        }
+      } catch (error) {
+        console.error('Error loading user basic info:', error);
+      }
+    };
+    loadUserBasicInfo();
+
   }, []);
 
   // New useEffect to fetch the user attributes array
@@ -200,6 +307,8 @@ const formatDateISO = (date: Date) => {
   const [username, setUsername] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [userDbId, setUserDbId] = useState<string | null>(null);
+
+  const userInfoText = `Esta es la informacion de ${username} , Rango: ${rango}, Puntos: ${puntos}.`;
 
 
   const updateUsername = async (newUsername: string) => {
@@ -338,7 +447,9 @@ const formatDateISO = (date: Date) => {
 
   return (
     <ThemedView style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView contentContainerStyle={styles.scrollViewContent} refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }>
 
         {/* Contenedor de la cabecera del perfil (Imagen + Título) */}
         <ThemedView style={styles.profileHeaderContainer}>
@@ -377,7 +488,7 @@ const formatDateISO = (date: Date) => {
                   <Collapsible title="Compartir perfil" customStyle={styles.dropdownCollapsible}>
                     <View style={styles.qrCodeContainer}>
                       <QRcode
-                        value={userDbId || 'No User ID'}
+                        value={userInfoText||'La infomacion de tu compañero estara disponible mas tarde, ponte a entrenar flacow'}
                         size={180}
                         color="white"
                         backgroundColor="transparent"
