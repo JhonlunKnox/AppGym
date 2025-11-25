@@ -9,7 +9,6 @@ import {
   StyleSheet,
   TextInput,
   Modal,
-  Alert,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import {
   Animated,
   Easing,
   Linking,
+  Alert,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { supabase } from "../../utils/supabase";
@@ -42,8 +42,6 @@ type Rutina = {
 
 /**
  * RUTA LOCAL DEL ASSET SUBIDO POR EL USUARIO
- * (El desarrollador pidió enviar la ruta tal cual: /mnt/data/...)
- * Puedes transformarla/servirla desde tu backend si la necesitas como URL pública.
  */
 const designImagePath = "/mnt/data/71acdf77-9e53-424d-807c-e6f77fe60db9.png";
 
@@ -59,6 +57,8 @@ export default function GymScreen() {
   // video states
   const [videoEmbedUrl, setVideoEmbedUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState<boolean>(false);
+  // videoError values:
+  // null = no error, 'fallback' = webview failed and we must show thumbnail silently, string = search error message
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoThumb, setVideoThumb] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -69,6 +69,10 @@ export default function GymScreen() {
   const [isMuted, setIsMuted] = useState<boolean>(true);
   const [isPlaybackReady, setIsPlaybackReady] = useState<boolean>(false);
   const webviewRef = useRef<WebView | null>(null);
+
+  // visual effect anims
+  const neonPulse = useRef(new Animated.Value(1)).current;
+  const glitchTranslate = useRef(new Animated.Value(0)).current;
 
   const [targets, setTargets] = useState<string[]>([]);
   const [filterTarget, setFilterTarget] = useState<string | null>(null);
@@ -104,13 +108,11 @@ export default function GymScreen() {
       setExercises(list);
       setFiltered(list);
 
-      // targets únicos y ordenados
       const t = Array.from(new Set(list.map((i) => (i.target || "").trim()).filter(Boolean)));
       t.sort((a, b) => a.localeCompare(b));
       setTargets(t);
     } catch (err) {
       console.error("loadAll err", err);
-      Alert.alert("Error", "No se pudieron cargar los ejercicios.");
     } finally {
       setLoading(false);
     }
@@ -141,20 +143,15 @@ export default function GymScreen() {
   function extractYouTubeIdFromUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     try {
-      // Common patterns
-      // watch?v=ID
       const watchMatch = url.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
       if (watchMatch && watchMatch[1]) return watchMatch[1];
 
-      // youtu.be/ID
       const shortMatch = url.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/);
       if (shortMatch && shortMatch[1]) return shortMatch[1];
 
-      // /embed/ID
       const embedMatch = url.match(/embed\/([A-Za-z0-9_-]{6,})/);
       if (embedMatch && embedMatch[1]) return embedMatch[1];
 
-      // fallback: any long-ish id-like token
       const generic = url.match(/([A-Za-z0-9_-]{6,})/);
       if (generic) return generic[1];
 
@@ -166,9 +163,9 @@ export default function GymScreen() {
 
   // Construye URL embed + autoplay (mute según estado isMuted)
   function makeEmbedUrlFromId(id: string, muted = true) {
-    // autoplay=1 required, but autoplay without mute is often blocked in mobile browsers; we keep default muted (user can unmute)
     const muteFlag = muted ? "1" : "0";
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=${muteFlag}&playsinline=1&controls=1&rel=0&showinfo=0`;
+    // use modestbranding & rel=0 to reduce distractions
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=${muteFlag}&playsinline=1&controls=1&rel=0&modestbranding=1`;
   }
 
   // abrir detalle (con async para buscar, si hace falta)
@@ -193,14 +190,13 @@ export default function GymScreen() {
       const extracted = extractYouTubeIdFromUrl(raw);
       if (extracted) {
         setVideoId(extracted);
-        // If we have direct youtube id we can optionally fetch thumbnail (high quality)
         setVideoThumb(`https://i.ytimg.com/vi/${extracted}/hqdefault.jpg`);
         setVideoEmbedUrl(makeEmbedUrlFromId(extracted, isMuted));
         setVideoLoading(false);
         return;
       }
 
-      // Otherwise, try to search via API (you had searchExerciseVideo)
+      // Otherwise, try to search via API
       const info: YouTubeVideo | null = await searchExerciseVideo(item.name);
       if (!info) {
         setVideoError("No se encontró video relacionado.");
@@ -232,7 +228,6 @@ export default function GymScreen() {
       setRutinas((data as Rutina[]) ?? []);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "No se pudieron cargar las rutinas.");
     } finally {
       setLoading(false);
     }
@@ -297,16 +292,15 @@ export default function GymScreen() {
   // recargar/reiniciar reproducción
   function replayVideo() {
     if (!videoId) return;
-    // rebuild embed url with current mute flag (if user toggled)
     const embed = makeEmbedUrlFromId(videoId, isMuted);
-    // small trick: changing key prop forces WebView reload; here we set videoEmbedUrl to null briefly then set again
     setVideoEmbedUrl(null);
     setTimeout(() => {
       setVideoEmbedUrl(embed);
       setIsPlaybackReady(false);
       thumbOpacity.setValue(1);
       webviewOpacity.setValue(0);
-    }, 80);
+      setVideoError(null);
+    }, 120);
   }
 
   // abrir en YouTube (versión "watch")
@@ -328,7 +322,6 @@ export default function GymScreen() {
       const next = !prev;
       if (videoId) {
         setVideoEmbedUrl(makeEmbedUrlFromId(videoId, next));
-        // reset animations so thumbnail shows briefly while reloading
         thumbOpacity.setValue(1);
         webviewOpacity.setValue(0);
         setIsPlaybackReady(false);
@@ -336,6 +329,32 @@ export default function GymScreen() {
       return next;
     });
   }
+
+  // Visual effects: neon pulse and glitch
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(neonPulse, { toValue: 1.08, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
+        Animated.timing(neonPulse, { toValue: 1.0, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
+      ])
+    ).start();
+  }, [neonPulse]);
+
+  // Start/stop glitch when fallback active
+  useEffect(() => {
+    if (videoError === "fallback") {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glitchTranslate, { toValue: -6, duration: 50, useNativeDriver: true }),
+          Animated.timing(glitchTranslate, { toValue: 6, duration: 50, useNativeDriver: true }),
+          Animated.timing(glitchTranslate, { toValue: 0, duration: 50, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      glitchTranslate.stopAnimation();
+      glitchTranslate.setValue(0);
+    }
+  }, [videoError]);
 
   // Render card
   function renderCard({ item }: { item: Exercise }) {
@@ -353,6 +372,9 @@ export default function GymScreen() {
   function DetailModal() {
     if (!detailExercise) return null;
 
+    // determine which thumbnail to use (videoThumb or design asset)
+    const thumbUri = videoThumb || designImagePath;
+
     return (
       <Modal visible={detailVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalSafe}>
@@ -368,46 +390,90 @@ export default function GymScreen() {
 
           <View style={styles.videoContainer}>
             {/* Thumbnail (Animated) */}
-            {videoThumb && (
+            {thumbUri && (
               <Animated.Image
-                source={{ uri: videoThumb }}
+                source={{ uri: thumbUri }}
                 style={[styles.thumbImage, { opacity: thumbOpacity }]}
                 resizeMode="cover"
               />
             )}
 
-            {/* Loading / Error / WebView */}
+            {/* scanlines overlay (visual only) */}
+            <View pointerEvents="none" style={styles.scanlinesContainer}>
+              {Array.from({ length: 16 }).map((_, i) => (
+                <View key={i} style={styles.scanline} />
+              ))}
+            </View>
+
+            {/* Loading / Fallback / WebView */}
             {videoLoading ? (
               <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#FF3B3B" />
+                <ActivityIndicator size="large" color="#FF1A1A" />
               </View>
-            ) : videoError ? (
+            ) : videoError && videoError !== "fallback" ? (
+              // show silent message (but still keep thumbnail)
               <View style={styles.centered}>
                 <Text style={styles.errorText}>{videoError}</Text>
               </View>
-            ) : videoEmbedUrl ? (
+            ) : videoEmbedUrl && videoError !== "fallback" ? (
               // WebView wrapped in Animated.View for fade-in
               <Animated.View style={{ ...styles.webviewWrap, opacity: webviewOpacity }}>
                 <WebView
-                    key={videoEmbedUrl} // force reload when url changes
-                    ref={(r) => { webviewRef.current = r; }}
-                    source={{ uri: videoEmbedUrl }}
-                    style={styles.webview}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    allowsInlineMediaPlayback
-                    mediaPlaybackRequiresUserAction={false}
-                    allowsFullscreenVideo
-                    onLoadEnd={() => {
-                      // small delay to ensure video frame ready
-                      setTimeout(onWebViewReady, 120);
-                    }}
-                  />
+                  key={videoEmbedUrl} // force reload when url changes
+                  ref={(r) => { webviewRef.current = r; }}
+                  source={{ uri: videoEmbedUrl }}
+                  style={styles.webview}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  allowsInlineMediaPlayback
+                  mediaPlaybackRequiresUserAction={false}
+                  allowsFullscreenVideo
+                  onLoadEnd={() => {
+                    // small delay to ensure video frame ready
+                    setTimeout(onWebViewReady, 120);
+                  }}
+                  onError={() => {
+                    // fallback silently to thumbnail — do NOT show alert
+                    setVideoError("fallback");
+                    // keep thumbnail visible (animations will show glitch)
+                    thumbOpacity.setValue(1);
+                    webviewOpacity.setValue(0);
+                  }}
+                />
               </Animated.View>
             ) : (
-              <View style={styles.centered}>
-                <Text style={styles.noVideoText}>No hay video disponible</Text>
-              </View>
+              // If embed not available or we fell back: keep thumbnail and show subtle glitch overlay + CTA
+              <Animated.View
+                pointerEvents="box-none"
+                style={[
+                  styles.fallbackOverlay,
+                  { transform: [{ translateX: glitchTranslate }] },
+                ]}
+              >
+                {/* Neon badge */}
+                <Animated.View style={[styles.neonBadge, { transform: [{ scale: neonPulse }] }]}>
+                  <Text style={styles.neonBadgeText}>{videoError === "fallback" ? "SEÑAL CAÍDA" : "PREVIEW"}</Text>
+                </Animated.View>
+
+                {/* Reintentar + Abrir en YouTube controls */}
+                <View style={styles.fallbackControls}>
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { marginRight: 8 }]}
+                    onPress={replayVideo}
+                    disabled={!videoId}
+                  >
+                    <Text style={styles.controlBtnText}>Reintentar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { marginLeft: 8 }]}
+                    onPress={openInYouTube}
+                    disabled={!videoId}
+                  >
+                    <Text style={styles.controlBtnText}>Abrir YouTube</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
             )}
           </View>
 
@@ -462,13 +528,13 @@ export default function GymScreen() {
 
             {creatingRutina ? (
               <>
-                <TextInput placeholder="Nombre de la nueva rutina" value={newRutinaName} onChangeText={setNewRutinaName} style={styles.input} />
+                <TextInput placeholder="Nombre de la nueva rutina" value={newRutinaName} onChangeText={setNewRutinaName} style={styles.input} placeholderTextColor="#aaa" />
                 <TouchableOpacity style={styles.btnPrimary} onPress={createRutina}>
                   <Text style={styles.btnPrimaryText}>Crear</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.btnSecondary, { marginTop: 8 }]} onPress={() => setCreatingRutina(false)}>
-                  <Text style={{ color: "#333" }}>Cancelar</Text>
+                  <Text style={{ color: "#ccc" }}>Cancelar</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -484,13 +550,13 @@ export default function GymScreen() {
                         addExerciseToRutina(item.id, detailExercise.id);
                       }}
                     >
-                      <Text style={{ fontWeight: "700" }}>{item.title}</Text>
-                      <Text style={{ color: "#666" }}>{item.description}</Text>
+                      <Text style={{ fontWeight: "700", color: "#fff" }}>{item.title}</Text>
+                      <Text style={{ color: "#888" }}>{item.description}</Text>
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={() => (
                     <View style={{ padding: 12 }}>
-                      <Text style={{ color: "#666" }}>No tienes rutinas aún.</Text>
+                      <Text style={{ color: "#888" }}>No tienes rutinas aún.</Text>
                     </View>
                   )}
                 />
@@ -500,7 +566,7 @@ export default function GymScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.btnSecondary, { marginTop: 8 }]} onPress={() => setRutinaModalVisible(false)}>
-                  <Text style={{ color: "#333" }}>Cerrar</Text>
+                  <Text style={{ color: "#ccc" }}>Cerrar</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -512,7 +578,6 @@ export default function GymScreen() {
 
   return (
     <View style={styles.container}>
-      {/* top row with optional design reference (not required by user, only available locally) */}
       <View style={styles.topRow}>
         <TouchableOpacity style={styles.bigCard} onPress={() => router.push("/routines")}>
           <Text style={styles.bigCardIcon}>🏋️</Text>
@@ -530,7 +595,7 @@ export default function GymScreen() {
       <Text style={styles.title}>Busca ejercicios 💪</Text>
 
       <View style={styles.searchRow}>
-        <TextInput placeholder="Buscar por nombre, target, body part..." style={styles.searchInput} value={searchQuery} onChangeText={setSearchQuery} />
+        <TextInput placeholder="Buscar por nombre, target, body part..." placeholderTextColor="#999" style={styles.searchInput} value={searchQuery} onChangeText={setSearchQuery} />
         <TouchableOpacity style={styles.filterButton} onPress={() => setFilterTarget(null)}>
           <Text style={{ color: "#fff" }}>Todos</Text>
         </TouchableOpacity>
@@ -706,13 +771,59 @@ const styles = StyleSheet.create({
     zIndex: 1,
     opacity: 1,
   },
+
+  // scanlines simulated by many thin rows
+  scanlinesContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 3,
+    opacity: 0.06,
+  },
+  scanline: {
+    height: 2,
+    backgroundColor: "#FF1A1A",
+    marginVertical: 3,
+    opacity: 0.06,
+  },
+
   webviewWrap: {
     flex: 1,
     width: "100%",
     height: "100%",
     zIndex: 2,
+    backgroundColor: "black",
   },
   webview: { flex: 1, backgroundColor: "#000" },
+
+  // fallback overlay (glitch + controls)
+  fallbackOverlay: {
+    position: "absolute",
+    zIndex: 4,
+    left: 0,
+    right: 0,
+    bottom: 12,
+    alignItems: "center",
+  },
+
+  neonBadge: {
+    backgroundColor: "rgba(255,26,26,0.12)",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,26,26,0.8)",
+    marginBottom: 12,
+  },
+  neonBadgeText: { color: "#FFB3B3", fontWeight: "900", letterSpacing: 1 },
+
+  fallbackControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 5,
+  },
 
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   errorText: { color: "#ff6666", fontWeight: "600" },
