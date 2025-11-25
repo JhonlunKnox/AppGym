@@ -1,24 +1,19 @@
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function askGemini(prompt: string): Promise<string> {
+// USA TU API KEY DE EXPO
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY!);
+
+export async function askGemini(prompt: string) {
   try {
-    const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
     });
 
-    const data = await res.json();
-    return (
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      'No se obtuvo respuesta'
-    );
-  } catch (err) {
-    console.error('Error con Gemini:', err);
-    return 'Error al conectar con Gemini';
+    const result = await model.generateContent(prompt);
+
+    return result.response.text();
+  } catch (error) {
+    console.error("❌ Error Gemini:", error);
+    return "Error obteniendo respuesta de Gemini.";
   }
 }
