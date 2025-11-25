@@ -136,7 +136,7 @@ export default function ProfileScreenTemplate() {
       const newRank = await validateAndUpdateRank(puntos, rango, updateusuario);
       setRango(newRank);
     } catch (err: any) {
-      setError(err.message || 'Error al validar rango');
+      setError(err.message || 'Error al validar rangos');
     }
   };
 
